@@ -62,7 +62,7 @@ fn pop_many<T>(vec: &mut Vec<T>, count: u16) -> Vec<T> {
     popped
 }
 
-fn move_crates(world: &mut Vec<Stack>, move_: Move) {
+fn _move_crates(world: &mut Vec<Stack>, move_: Move) {
     for _ in 0..move_.crates_to_move {
         let start_stack = &mut world[(move_.start_stack - 1) as usize];
         let crate_to_move = start_stack.crates.pop().unwrap();

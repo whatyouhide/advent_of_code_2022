@@ -1,5 +1,3 @@
-use crate::util::util;
-
 #[derive(Copy, Clone, PartialEq)]
 enum Choice {
     Rock,
@@ -15,9 +13,7 @@ enum RoundEnd {
 }
 
 pub fn run() {
-    let lines = fs::read_to_string("inputs/day1.txt")
-        .expect("Failed to read file")
-        .lines();
+    let lines = include_str!("../inputs/day2.txt").lines();
 
     let mut total = 0;
 

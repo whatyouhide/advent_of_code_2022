@@ -1,9 +1,9 @@
 use std::{collections::HashSet, fs};
 
-use crate::util::util;
-
 pub fn run() {
-    let lines = util::read_lines_from_file("inputs/day3.txt");
+    let lines = include_str!("../inputs/day3.txt")
+        .lines()
+        .collect::<Vec<&str>>();
     let mut total: i32 = 0;
 
     for line in lines {
@@ -22,7 +22,7 @@ pub fn run() {
     println!("{:?}", total);
 }
 
-pub fn run2() {
+pub fn _run2() {
     let contents = fs::read_to_string("inputs/day3.txt").expect("Could not read file");
 
     let lines = contents.lines().collect::<Vec<&str>>();

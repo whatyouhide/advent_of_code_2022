@@ -18,12 +18,12 @@ pub fn run() {
 
     println!("Day 4: {}", count);
 }
-pub fn run2() {
-    assert_eq!(is_overlapping(&(1..3), &(2..4)), true);
-    assert_eq!(is_overlapping(&(1..3), &(3..4)), true);
-    assert_eq!(is_overlapping(&(3..4), &(1..3)), true);
-    assert_eq!(is_overlapping(&(1..3), &(4..6)), false);
-    assert_eq!(is_overlapping(&(4..6), &(1..3)), false);
+pub fn _run2() {
+    assert_eq!(_is_overlapping(&(1..3), &(2..4)), true);
+    assert_eq!(_is_overlapping(&(1..3), &(3..4)), true);
+    assert_eq!(_is_overlapping(&(3..4), &(1..3)), true);
+    assert_eq!(_is_overlapping(&(1..3), &(4..6)), false);
+    assert_eq!(_is_overlapping(&(4..6), &(1..3)), false);
 
     let input = include_str!("../inputs/day4.txt");
 
@@ -35,7 +35,7 @@ pub fn run2() {
         let left_range = parse_into_range(left);
         let right_range = parse_into_range(right);
 
-        if is_overlapping(&left_range, &right_range) {
+        if _is_overlapping(&left_range, &right_range) {
             count += 1;
         }
     }
@@ -56,7 +56,7 @@ fn is_contained(left: &Range<u32>, right: &Range<u32>) -> bool {
 }
 
 // Returns true if left and right overlap.
-fn is_overlapping(left: &Range<u32>, right: &Range<u32>) -> bool {
+fn _is_overlapping(left: &Range<u32>, right: &Range<u32>) -> bool {
     let (min, max) = if left.start < right.start {
         (left, right)
     } else {

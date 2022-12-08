@@ -1,6 +1,6 @@
 use std::fs;
 
-fn main() {
+pub fn run() {
     // let max = fs::read_to_string("input.txt")
     //     .expect("Should have been able to read the file")
     //     .split("\n\n")
@@ -35,18 +35,18 @@ fn main() {
     println!("{:?}", top_3_sum);
 }
 
-fn run() {
-    let chunk_sums = fs::read_to_string("inputs/day1.txt")
-        .expect("Failed to read file")
-        .split("\n\n") // Split into chunks of lines
-        .map(|chunk| {
-            chunk
-                .split("\n") // Split the chunk into lines
-                .map(|calorie| calorie.parse::<i32>().unwrap()) // Parse integers
-                .sum() // Calculate the sum for each chunk
-        });
+fn _runn() {
+    // let chunk_sums = fs::read_to_string("inputs/day1.txt")
+    //     .expect("Failed to read file")
+    //     .split("\n\n") // Split into chunks of lines
+    //     .map(|chunk| {
+    //         chunk
+    //             .split("\n") // Split the chunk into lines
+    //             .map(|calorie| calorie.parse::<i32>().unwrap()) // Parse integers
+    //             .sum() // Calculate the sum for each chunk
+    //     });
 
-    let max = chunk_sums.max().unwrap();
+    // let max = chunk_sums.max().unwrap();
 
-    println!("{:?}", top_3_sum);
+    // println!("{:?}", top_3_sum);
 }
