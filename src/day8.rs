@@ -32,12 +32,15 @@ impl Forest {
         return forest;
     }
 
-    fn is_visible(&self, row_index: usize, tree_index: usize) -> bool {
-        if row_index == 0
+    fn on_edge(&self, row_index: usize, tree_index: usize) -> bool {
+        return row_index == 0
             || tree_index == 0
             || row_index == self.rows - 1
-            || tree_index == self.columns - 1
-        {
+            || tree_index == self.columns - 1;
+    }
+
+    fn is_visible(&self, row_index: usize, tree_index: usize) -> bool {
+        if self.on_edge(row_index, tree_index) {
             return true;
         }
 
@@ -81,11 +84,7 @@ impl Forest {
 
         let tree = self.trees[row_index][tree_index];
 
-        if row_index == 0
-            || tree_index == 0
-            || row_index == self.rows - 1
-            || tree_index == self.columns - 1
-        {
+        if self.on_edge(row_index, tree_index) {
             return 0;
         }
 
