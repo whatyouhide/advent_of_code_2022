@@ -43,64 +43,68 @@ impl Move {
 
 #[derive(Debug)]
 struct Rope {
-    head: Position,
-    tail: Position,
+    knots: [Position; 10],
 }
 
 impl Rope {
     fn move_head(&mut self, move_: &Move) {
         match move_.direction {
-            Direction::Up => self.head.0 += 1 as i32,
-            Direction::Down => self.head.0 -= 1 as i32,
-            Direction::Left => self.head.1 -= 1 as i32,
-            Direction::Right => self.head.1 += 1 as i32,
+            Direction::Up => self.knots[0].0 += 1 as i32,
+            Direction::Down => self.knots[0].0 -= 1 as i32,
+            Direction::Left => self.knots[0].1 -= 1 as i32,
+            Direction::Right => self.knots[0].1 += 1 as i32,
         }
     }
 
-    fn update_tail(&mut self, visited_positions: &mut HashSet<Position>) {
-        // The tail is already close enough to the head.
-        if self.distance_between_head_and_tail() <= 1 {
-            visited_positions.insert(self.tail.clone());
-            return;
+    fn update_other_knots(&mut self, visited_positions: &mut HashSet<Position>) {
+        for index in 1..self.knots.len() {
+            // This knot is already close enough to the next.
+            if self.distance_between_knot_and_next(index) <= 1 {
+                break;
+            }
+
+            if self.knots[index - 1].0 == self.knots[index].0 {
+                if self.knots[index - 1].1 > self.knots[index].1 {
+                    self.knots[index].1 += 1;
+                } else {
+                    self.knots[index].1 -= 1;
+                }
+            } else if self.knots[index - 1].1 == self.knots[index].1 {
+                if self.knots[index - 1].0 > self.knots[index].0 {
+                    self.knots[index].0 += 1;
+                } else {
+                    self.knots[index].0 -= 1;
+                }
+            } else {
+                // Diagonal.
+                if self.knots[index - 1].0 > self.knots[index].0 {
+                    self.knots[index].0 += 1;
+                } else {
+                    self.knots[index].0 -= 1;
+                }
+
+                if self.knots[index - 1].1 > self.knots[index].1 {
+                    self.knots[index].1 += 1;
+                } else {
+                    self.knots[index].1 -= 1;
+                }
+            }
         }
 
-        if self.head.0 == self.tail.0 {
-            if self.head.1 > self.tail.1 {
-                self.tail.1 += 1;
-            } else {
-                self.tail.1 -= 1;
-            }
-        } else if self.head.1 == self.tail.1 {
-            if self.head.0 > self.tail.0 {
-                self.tail.0 += 1;
-            } else {
-                self.tail.0 -= 1;
-            }
-        } else {
-            // Diagonal.
-            if self.head.0 > self.tail.0 {
-                self.tail.0 += 1;
-            } else {
-                self.tail.0 -= 1;
-            }
-
-            if self.head.1 > self.tail.1 {
-                self.tail.1 += 1;
-            } else {
-                self.tail.1 -= 1;
-            }
-        }
-
-        visited_positions.insert(self.tail.clone());
+        visited_positions.insert(self.knots[self.knots.len() - 1].clone());
     }
 
-    fn distance_between_head_and_tail(&self) -> usize {
-        if (self.head.0 == self.tail.0 + 1 || self.head.0 == self.tail.0 - 1)
-            && (self.head.1 == self.tail.1 + 1 || self.head.1 == self.tail.1 - 1)
+    fn distance_between_knot_and_next(&self, knot_index: usize) -> usize {
+        if (self.knots[knot_index - 1].0 == self.knots[knot_index].0 + 1
+            || self.knots[knot_index - 1].0 == self.knots[knot_index].0 - 1)
+            && (self.knots[knot_index - 1].1 == self.knots[knot_index].1 + 1
+                || self.knots[knot_index - 1].1 == self.knots[knot_index].1 - 1)
         {
             1
         } else {
-            ((self.head.0 - self.tail.0).abs() + (self.head.1 - self.tail.1).abs()) as usize
+            ((self.knots[knot_index - 1].0 - self.knots[knot_index].0).abs()
+                + (self.knots[knot_index - 1].1 - self.knots[knot_index].1).abs())
+                as usize
         }
     }
 }
@@ -109,13 +113,17 @@ impl fmt::Display for Rope {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for row in (-20..20).rev() {
             for column in -20..20 {
-                if (row, column) == self.head {
-                    write!(f, "H")?;
-                } else if (row, column) == self.tail {
-                    write!(f, "T")?;
-                } else {
-                    write!(f, ".")?;
+                let mut found = false;
+                for index in 0..self.knots.len() {
+                    if self.knots[index] == (row, column) {
+                        write!(f, "{}", index)?;
+                        found = true;
+                    }
                 }
+
+                if !found {
+                    write!(f, ".")?
+                };
             }
 
             write!(f, "\n")?;
@@ -128,15 +136,26 @@ impl fmt::Display for Rope {
 pub fn run() {
     let input = include_str!("../inputs/day9.txt");
     let mut visited_positions: HashSet<Position> = HashSet::new();
+
     let mut rope = Rope {
-        head: (0, 0),
-        tail: (0, 0),
+        knots: [
+            (0, 0),
+            (0, 0),
+            (0, 0),
+            (0, 0),
+            (0, 0),
+            (0, 0),
+            (0, 0),
+            (0, 0),
+            (0, 0),
+            (0, 0),
+        ],
     };
 
     for move_ in input.lines().map(Move::from_line) {
         for _ in 0..move_.distance {
             rope.move_head(&move_);
-            rope.update_tail(&mut visited_positions);
+            rope.update_other_knots(&mut visited_positions);
         }
     }
 
