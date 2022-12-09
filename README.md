@@ -1,5 +1,7 @@
 # Advent of Code 2022
 
+![cover-image](https://user-images.githubusercontent.com/3890250/206675599-0900e443-8fb4-46d8-8c2d-95b8a99cfe46.png)
+
 I mostly write Elixir at this point in my career. I'm doing [Advent of
 Code][aoc] this year to learn a bit of [Rust][rust].
 
