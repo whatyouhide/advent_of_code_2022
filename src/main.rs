@@ -8,9 +8,10 @@ mod day5;
 mod day6;
 mod day7;
 mod day8;
+mod day9;
 
 fn main() {
-    let day = env::args().nth(1).unwrap_or(String::from("day8"));
+    let day = env::args().nth(1).unwrap_or(String::from("day9"));
 
     match day.as_str() {
         "day1" => day1::run(),
@@ -21,6 +22,7 @@ fn main() {
         "day6" => day6::run(),
         "day7" => day7::run(),
         "day8" => day8::run(),
+        "day9" => day9::run(),
         _ => println!("No such day: {}", day),
     }
 }
