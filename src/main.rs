@@ -1,6 +1,7 @@
 use std::env;
 
 mod day1;
+mod day10;
 mod day2;
 mod day3;
 mod day4;
@@ -23,6 +24,7 @@ fn main() {
         "day7" => day7::run(),
         "day8" => day8::run(),
         "day9" => day9::run(),
+        "day10" => day10::run(),
         _ => println!("No such day: {}", day),
     }
 }
