@@ -128,8 +128,7 @@ impl Forest {
     }
 }
 
-pub fn run() {
-    let input = include_str!("../inputs/day8.txt");
+pub fn run(input: &str) {
     let forest = Forest::new(input);
 
     let mut visible = 0;

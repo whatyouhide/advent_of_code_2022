@@ -1,5 +1,5 @@
-pub fn run() {
-    let mut sorted_asc = include_str!("../inputs/day1.txt")
+pub fn run(input: &str) {
+    let mut sorted_asc = input
         .split("\n\n")
         .map(|line_chunks| line_chunks.split("\n"))
         .map(|chunk| {

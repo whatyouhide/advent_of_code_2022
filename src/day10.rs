@@ -1,6 +1,4 @@
-pub fn run() {
-    let input = include_str!("../inputs/day10.txt");
-
+pub fn run(input: &str) {
     let mut register: i32 = 1;
     let mut lines = input.lines();
 

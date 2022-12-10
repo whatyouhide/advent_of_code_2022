@@ -76,9 +76,7 @@ enum Line {
     Dir(String),
 }
 
-pub fn run() {
-    let input = include_str!("../inputs/day7.txt");
-
+pub fn run(input: &str) {
     let root = Rc::new(RefCell::new(Node::new(Dir {
         name: "/".to_string(),
     })));

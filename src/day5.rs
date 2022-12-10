@@ -11,9 +11,7 @@ struct Stack {
     crates: Vec<char>,
 }
 
-pub fn run() {
-    let input = include_str!("../inputs/day5.txt");
-
+pub fn run(input: &str) {
     let mut world = Vec::new();
 
     for column_index in 0..count_stacks(input) {

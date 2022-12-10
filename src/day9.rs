@@ -133,8 +133,7 @@ impl fmt::Display for Rope {
     }
 }
 
-pub fn run() {
-    let input = include_str!("../inputs/day9.txt");
+pub fn run(input: &str) {
     let mut visited_positions: HashSet<Position> = HashSet::new();
 
     let mut rope = Rope {

@@ -12,8 +12,8 @@ enum RoundEnd {
     Draw,
 }
 
-pub fn run() {
-    let lines = include_str!("../inputs/day2.txt").lines();
+pub fn run(input: &str) {
+    let lines = input.lines();
 
     let mut total = 0;
 

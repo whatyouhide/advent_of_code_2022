@@ -12,19 +12,19 @@ mod day8;
 mod day9;
 
 fn main() {
-    let day = env::args().nth(1).unwrap_or(String::from("day9"));
+    let day = env::args().nth(1).expect("No day to run was specified");
 
     match day.as_str() {
-        "day1" => day1::run(),
-        "day2" => day2::run(),
-        "day3" => day3::run(),
-        "day4" => day4::run(),
-        "day5" => day5::run(),
-        "day6" => day6::run(),
-        "day7" => day7::run(),
-        "day8" => day8::run(),
-        "day9" => day9::run(),
-        "day10" => day10::run(),
+        "day1" => day1::run(include_str!("../inputs/day1.txt")),
+        "day2" => day2::run(include_str!("../inputs/day2.txt")),
+        "day3" => day3::run(include_str!("../inputs/day3.txt")),
+        "day4" => day4::run(include_str!("../inputs/day4.txt")),
+        "day5" => day5::run(include_str!("../inputs/day5.txt")),
+        "day6" => day6::run(include_str!("../inputs/day6.txt")),
+        "day7" => day7::run(include_str!("../inputs/day7.txt")),
+        "day8" => day8::run(include_str!("../inputs/day8.txt")),
+        "day9" => day9::run(include_str!("../inputs/day9.txt")),
+        "day10" => day10::run(include_str!("../inputs/day10.txt")),
         _ => println!("No such day: {}", day),
     }
 }

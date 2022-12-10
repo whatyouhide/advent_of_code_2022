@@ -1,8 +1,6 @@
 use std::collections::HashSet;
 
-pub fn run() {
-    let input = include_str!("../inputs/day3.txt");
-
+pub fn run(input: &str) {
     let lines = input.lines().collect::<Vec<&str>>();
     let chunks = lines.chunks(3).collect::<Vec<&[&str]>>();
 

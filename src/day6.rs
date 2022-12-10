@@ -1,8 +1,6 @@
 const MARKER_LENGTH: usize = 14;
 
-pub fn run() {
-    let input = include_str!("../inputs/day6.txt");
-
+pub fn run(input: &str) {
     let mut seen_chars = input.chars().collect::<Vec<char>>();
     let chars = seen_chars.drain(MARKER_LENGTH..).collect::<Vec<char>>();
     let mut counted_chars = MARKER_LENGTH;

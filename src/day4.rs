@@ -1,8 +1,6 @@
 use std::ops::Range;
 
-pub fn run() {
-    let input = include_str!("../inputs/day4.txt");
-
+pub fn run(input: &str) {
     let mut count: u32 = 0;
 
     for line in input.lines() {
