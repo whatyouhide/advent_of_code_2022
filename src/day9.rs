@@ -138,18 +138,7 @@ pub fn run() {
     let mut visited_positions: HashSet<Position> = HashSet::new();
 
     let mut rope = Rope {
-        knots: [
-            (0, 0),
-            (0, 0),
-            (0, 0),
-            (0, 0),
-            (0, 0),
-            (0, 0),
-            (0, 0),
-            (0, 0),
-            (0, 0),
-            (0, 0),
-        ],
+        knots: [(0, 0); 10],
     };
 
     for move_ in input.lines().map(Move::from_line) {
@@ -160,4 +149,28 @@ pub fn run() {
     }
 
     println!("Visited {} positions", visited_positions.len());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_move() {
+        let move_ = Move::from_line("U 1");
+        assert_eq!(move_.direction, Direction::Up);
+        assert_eq!(move_.distance, 1);
+
+        let move_ = Move::from_line("D 5");
+        assert_eq!(move_.direction, Direction::Down);
+        assert_eq!(move_.distance, 5);
+
+        let move_ = Move::from_line("L 11");
+        assert_eq!(move_.direction, Direction::Left);
+        assert_eq!(move_.distance, 11);
+
+        let move_ = Move::from_line("R 1");
+        assert_eq!(move_.direction, Direction::Right);
+        assert_eq!(move_.distance, 1);
+    }
 }

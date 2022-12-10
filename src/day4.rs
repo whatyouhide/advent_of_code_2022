@@ -11,31 +11,7 @@ pub fn run() {
         let left_range = parse_into_range(left);
         let right_range = parse_into_range(right);
 
-        if is_contained(&left_range, &right_range) || is_contained(&right_range, &left_range) {
-            count += 1;
-        }
-    }
-
-    println!("Day 4: {}", count);
-}
-pub fn _run2() {
-    assert_eq!(_is_overlapping(&(1..3), &(2..4)), true);
-    assert_eq!(_is_overlapping(&(1..3), &(3..4)), true);
-    assert_eq!(_is_overlapping(&(3..4), &(1..3)), true);
-    assert_eq!(_is_overlapping(&(1..3), &(4..6)), false);
-    assert_eq!(_is_overlapping(&(4..6), &(1..3)), false);
-
-    let input = include_str!("../inputs/day4.txt");
-
-    let mut count: u32 = 0;
-
-    for line in input.lines() {
-        let (left, right) = line.split_once(",").unwrap();
-
-        let left_range = parse_into_range(left);
-        let right_range = parse_into_range(right);
-
-        if _is_overlapping(&left_range, &right_range) {
+        if is_overlapping(&left_range, &right_range) {
             count += 1;
         }
     }
@@ -43,20 +19,15 @@ pub fn _run2() {
     println!("Day 4: {}", count);
 }
 
-fn parse_into_range(input: &str) -> Range<u32> {
-    let (left, right) = input.split_once("-").unwrap();
+fn parse_into_range(string: &str) -> Range<u32> {
+    let (left, right) = string.split_once("-").unwrap();
     let start = left.parse::<u32>().unwrap();
     let end = right.parse::<u32>().unwrap();
     start..end
 }
 
-// Checks if the second range is contained in the first range.
-fn is_contained(left: &Range<u32>, right: &Range<u32>) -> bool {
-    right.start >= left.start && right.end <= left.end
-}
-
 // Returns true if left and right overlap.
-fn _is_overlapping(left: &Range<u32>, right: &Range<u32>) -> bool {
+fn is_overlapping(left: &Range<u32>, right: &Range<u32>) -> bool {
     let (min, max) = if left.start < right.start {
         (left, right)
     } else {
@@ -64,4 +35,25 @@ fn _is_overlapping(left: &Range<u32>, right: &Range<u32>) -> bool {
     };
 
     min.end >= max.start
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_into_range() {
+        assert_eq!(parse_into_range("1-2"), 1..2);
+        assert_eq!(parse_into_range("1-3"), 1..3);
+        assert_eq!(parse_into_range("2-3"), 2..3);
+    }
+
+    #[test]
+    fn test_is_overlapping() {
+        assert!(is_overlapping(&(1..3), &(2..4)));
+        assert!(is_overlapping(&(1..3), &(3..4)));
+        assert!(is_overlapping(&(3..4), &(1..3)));
+        assert!(!is_overlapping(&(1..3), &(4..6)));
+        assert!(!is_overlapping(&(4..6), &(1..3)));
+    }
 }

@@ -26,3 +26,12 @@ fn all_chars_are_different(chars: &Vec<char>) -> bool {
     chars.dedup();
     chars.len() == full_length
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn all_chars_are_different() {
+        assert!(super::all_chars_are_different(&vec!['a', 'b', 'c']));
+        assert!(!super::all_chars_are_different(&vec!['a', 'b', 'a']));
+    }
+}

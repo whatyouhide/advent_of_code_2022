@@ -1,31 +1,9 @@
-use std::{collections::HashSet, fs};
+use std::collections::HashSet;
 
 pub fn run() {
-    let lines = include_str!("../inputs/day3.txt")
-        .lines()
-        .collect::<Vec<&str>>();
-    let mut total: i32 = 0;
+    let input = include_str!("../inputs/day3.txt");
 
-    for line in lines {
-        let (left, right) = line.split_at(line.len() / 2);
-
-        let left_items: HashSet<char> = HashSet::from_iter(left.chars());
-        let right_items: HashSet<char> = HashSet::from_iter(right.chars());
-
-        let common: &char = left_items
-            .intersection(&right_items)
-            .collect::<Vec<&char>>()[0];
-
-        total = total + priority(*common);
-    }
-
-    println!("{:?}", total);
-}
-
-pub fn _run2() {
-    let contents = fs::read_to_string("inputs/day3.txt").expect("Could not read file");
-
-    let lines = contents.lines().collect::<Vec<&str>>();
+    let lines = input.lines().collect::<Vec<&str>>();
     let chunks = lines.chunks(3).collect::<Vec<&[&str]>>();
 
     let mut total: i32 = 0;
