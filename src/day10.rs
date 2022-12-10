@@ -1,25 +1,19 @@
-const TARGET_CYCLES: [usize; 6] = [20, 60, 100, 140, 180, 220];
-
 pub fn run() {
     let input = include_str!("../inputs/day10.txt");
 
-    let mut total = 0;
     let mut register: i32 = 1;
     let mut lines = input.lines();
 
     let mut addx_cycles = 0;
     let mut next_addx_value = 0;
 
-    for cycle in 0..*TARGET_CYCLES.iter().max().unwrap() {
-        let corrected_cycle = cycle + 1;
-        if TARGET_CYCLES.contains(&corrected_cycle) {
-            let strength = register * corrected_cycle as i32;
-            println!(
-                "Register at cycle {}: {} (strength: {})",
-                corrected_cycle, register, strength
-            );
+    for cycle in 0..240 {
+        let row_cycle = cycle % 40;
 
-            total += strength;
+        if row_cycle == register || row_cycle == register - 1 || row_cycle == register + 1 {
+            print!("#");
+        } else {
+            print!(".");
         }
 
         if addx_cycles == 1 {
@@ -37,8 +31,9 @@ pub fn run() {
                 addx_cycles = 1;
             }
         }
-    }
 
-    println!("Register at the end: {}", register);
-    println!("Total of target cycles: {}", total);
+        if cycle % 40 == 39 {
+            println!("");
+        }
+    }
 }
