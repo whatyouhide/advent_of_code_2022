@@ -2,6 +2,7 @@ use std::env;
 
 mod day1;
 mod day10;
+mod day11;
 mod day2;
 mod day3;
 mod day4;
@@ -25,6 +26,7 @@ fn main() {
         "day8" => day8::run(include_str!("../inputs/day8.txt")),
         "day9" => day9::run(include_str!("../inputs/day9.txt")),
         "day10" => day10::run(include_str!("../inputs/day10.txt")),
+        "day11" => day11::run(include_str!("../inputs/day11.txt")),
         _ => println!("No such day: {}", day),
     }
 }
