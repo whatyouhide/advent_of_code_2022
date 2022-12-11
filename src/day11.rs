@@ -1,6 +1,6 @@
 use std::str::Lines;
 
-const ROUNDS: u16 = 20;
+const ROUNDS: u16 = 10000;
 
 #[derive(Debug, PartialEq, Clone)]
 enum Operation {
@@ -100,14 +100,12 @@ pub fn run(input: &str) {
         .map(parse_monkey)
         .collect::<Vec<Monkey>>();
 
-    for _round in 0..ROUNDS {
-        for monkey_index in 0..monkeys.len() {
-            monkey_run(&mut monkeys, monkey_index);
-        }
-    }
+    let number_space = monkeys.iter().map(|x| x.divisible_by).product::<u64>();
 
-    for (index, monkey) in monkeys.iter().enumerate() {
-        println!("Monkey {index} inspected {} items", monkey.inspected_items);
+    for _round in 1..=ROUNDS {
+        for monkey_index in 0..monkeys.len() {
+            monkey_run(&mut monkeys, monkey_index, number_space);
+        }
     }
 
     let mut inspected_items = monkeys
@@ -128,7 +126,7 @@ fn parse_monkey(input: &str) -> Monkey {
     Monkey::new(rest)
 }
 
-fn monkey_run(monkeys: &mut Vec<Monkey>, index: usize) {
+fn monkey_run(monkeys: &mut Vec<Monkey>, index: usize, number_space: u64) {
     let items = monkeys[index].items.clone();
     let operation = monkeys[index].operation.clone();
     let divisible_by = monkeys[index].divisible_by.clone();
@@ -142,15 +140,15 @@ fn monkey_run(monkeys: &mut Vec<Monkey>, index: usize) {
             Operation::Square => item * item,
         };
 
-        let bored_new_item = new_item / 3;
+        let new_item = new_item % number_space;
 
-        let throw_index = if bored_new_item % divisible_by == 0 {
+        let throw_index = if new_item % divisible_by == 0 {
             monkey_index_if_true
         } else {
             monkey_index_if_false
         };
 
-        monkeys[throw_index].items.push(bored_new_item);
+        monkeys[throw_index].items.push(new_item);
     }
 
     monkeys[index].items = Vec::new();
@@ -190,11 +188,11 @@ mod tests {
             },
         ];
 
-        monkey_run(&mut monkeys, 1);
+        monkey_run(&mut monkeys, 1, 1000000);
 
-        assert_eq!(monkeys[0].items, vec![5, 2, 3]);
+        assert_eq!(monkeys[0].items, vec![5, 2, 9]);
         assert_eq!(monkeys[1].items, vec![]);
         assert_eq!(monkeys[1].inspected_items, 2);
-        assert_eq!(monkeys[2].items, vec![6]);
+        assert_eq!(monkeys[2].items, vec![18]);
     }
 }
