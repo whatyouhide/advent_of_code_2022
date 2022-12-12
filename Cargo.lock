@@ -5,3 +5,12 @@ version = 3
 [[package]]
 name = "aoc22"
 version = "0.1.0"
+dependencies = [
+ "infinitable",
+]
+
+[[package]]
+name = "infinitable"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78d255dfc51600dd58765ca25372cb96cdd731133ab252d5442dccf6bd27eee7"
