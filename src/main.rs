@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, fs};
 
 mod day1;
 mod day10;
@@ -14,21 +14,37 @@ mod day8;
 mod day9;
 
 fn main() {
-    let day = env::args().nth(1).expect("No day to run was specified");
+    let day_arg = env::args()
+        .nth(1)
+        .expect("Specify a day (day11) or a day with tests (day11_test)");
 
-    match day.as_str() {
-        "day1" => day1::run(include_str!("../inputs/day1.txt")),
-        "day2" => day2::run(include_str!("../inputs/day2.txt")),
-        "day3" => day3::run(include_str!("../inputs/day3.txt")),
-        "day4" => day4::run(include_str!("../inputs/day4.txt")),
-        "day5" => day5::run(include_str!("../inputs/day5.txt")),
-        "day6" => day6::run(include_str!("../inputs/day6.txt")),
-        "day7" => day7::run(include_str!("../inputs/day7.txt")),
-        "day8" => day8::run(include_str!("../inputs/day8.txt")),
-        "day9" => day9::run(include_str!("../inputs/day9.txt")),
-        "day10" => day10::run(include_str!("../inputs/day10.txt")),
-        "day11" => day11::run(include_str!("../inputs/day11.txt")),
-        "day12" => day12::run(include_str!("../inputs/day12_test.txt")),
+    let day = if day_arg.ends_with("_test") {
+        &day_arg[0..day_arg.len() - 5]
+    } else {
+        day_arg.as_str()
+    };
+
+    let input = read_file_for_day(&day_arg);
+
+    println!("== Running {day_arg} ==\n");
+
+    match day {
+        "day1" => day1::run(input.as_str()),
+        "day2" => day2::run(input.as_str()),
+        "day3" => day3::run(input.as_str()),
+        "day4" => day4::run(input.as_str()),
+        "day5" => day5::run(input.as_str()),
+        "day6" => day6::run(input.as_str()),
+        "day7" => day7::run(input.as_str()),
+        "day8" => day8::run(input.as_str()),
+        "day9" => day9::run(input.as_str()),
+        "day10" => day10::run(input.as_str()),
+        "day11" => day11::run(input.as_str()),
+        "day12" => day12::run(input.as_str()),
         _ => println!("No such day: {}", day),
     }
+}
+
+fn read_file_for_day(day: &str) -> String {
+    fs::read_to_string(format!("inputs/{day}.txt")).unwrap()
 }
