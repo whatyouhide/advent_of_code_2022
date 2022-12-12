@@ -4,7 +4,19 @@ mod day1;
 mod day10;
 mod day11;
 mod day12;
+mod day13;
+mod day14;
+mod day15;
+mod day16;
+mod day17;
+mod day18;
+mod day19;
 mod day2;
+mod day20;
+mod day21;
+mod day22;
+mod day23;
+mod day24;
 mod day3;
 mod day4;
 mod day5;
@@ -41,10 +53,33 @@ fn main() {
         "day10" => day10::run(input.as_str()),
         "day11" => day11::run(input.as_str()),
         "day12" => day12::run(input.as_str()),
+        "day13" => day13::run(input.as_str()),
+        "day14" => day14::run(input.as_str()),
+        "day15" => day15::run(input.as_str()),
+        "day16" => day16::run(input.as_str()),
+        "day17" => day17::run(input.as_str()),
+        "day18" => day18::run(input.as_str()),
+        "day19" => day19::run(input.as_str()),
+        "day20" => day20::run(input.as_str()),
+        "day21" => day21::run(input.as_str()),
+        "day22" => day22::run(input.as_str()),
+        "day23" => day23::run(input.as_str()),
+        "day24" => day24::run(input.as_str()),
         _ => println!("No such day: {}", day),
     }
 }
 
 fn read_file_for_day(day: &str) -> String {
-    fs::read_to_string(format!("inputs/{day}.txt")).unwrap()
+    let contents = fs::read_to_string(format!("inputs/{day}.txt"));
+
+    match contents {
+        Ok(contents) => contents,
+        Err(_) => {
+            if day.ends_with("_test") {
+                panic!("No test input file found for day {}", day);
+            } else {
+                panic!("{day} not implemented yet");
+            };
+        }
+    }
 }
