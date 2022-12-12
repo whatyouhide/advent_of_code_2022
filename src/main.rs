@@ -28,7 +28,7 @@ fn main() {
         "day9" => day9::run(include_str!("../inputs/day9.txt")),
         "day10" => day10::run(include_str!("../inputs/day10.txt")),
         "day11" => day11::run(include_str!("../inputs/day11.txt")),
-        "day12" => day12::run(include_str!("../inputs/day12.txt")),
+        "day12" => day12::run(include_str!("../inputs/day12_test.txt")),
         _ => println!("No such day: {}", day),
     }
 }
