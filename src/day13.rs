@@ -1,12 +1,12 @@
 use std::cmp::Ordering;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 enum Value {
     Int(u16),
     List(Box<LinkedList>),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 enum LinkedList {
     Empty,
     Cons(Value, Box<LinkedList>),
@@ -56,24 +56,23 @@ impl LinkedList {
     }
 }
 
-impl PartialOrd for LinkedList {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+impl Ord for LinkedList {
+    fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
-            (LinkedList::Empty, LinkedList::Empty) => Some(Ordering::Equal),
+            (LinkedList::Empty, LinkedList::Empty) => Ordering::Equal,
 
             // If the left list runs out of items first, the inputs are in the right order.
-            (LinkedList::Empty, _) => Some(Ordering::Less),
+            (LinkedList::Empty, _) => Ordering::Less,
 
             // If the right list runs out of items first, the inputs are in the wrong order.
-            (_, LinkedList::Empty) => Some(Ordering::Greater),
+            (_, LinkedList::Empty) => Ordering::Greater,
 
             (LinkedList::Cons(value, tail), LinkedList::Cons(other_value, other_tail)) => {
                 // If both values are integers, the lower integer should come first.
                 match (value, other_value) {
-                    (Value::Int(int), Value::Int(other_int)) => match int.partial_cmp(other_int) {
-                        Some(Ordering::Equal) => tail.partial_cmp(other_tail),
-                        Some(ordering) => Some(ordering),
-                        None => None,
+                    (Value::Int(int), Value::Int(other_int)) => match int.cmp(other_int) {
+                        Ordering::Equal => tail.cmp(other_tail),
+                        ordering => ordering,
                     },
 
                     // If exactly one value is an integer, convert the integer to a list which
@@ -82,10 +81,9 @@ impl PartialOrd for LinkedList {
                         let wrapped_int =
                             LinkedList::Cons(Value::Int(*int), Box::new(LinkedList::Empty));
 
-                        match wrapped_int.partial_cmp(list) {
-                            Some(Ordering::Equal) => tail.partial_cmp(other_tail),
-                            Some(ordering) => Some(ordering),
-                            None => None,
+                        match wrapped_int.cmp(list) {
+                            Ordering::Equal => tail.cmp(other_tail),
+                            ordering => ordering,
                         }
                     }
 
@@ -95,23 +93,25 @@ impl PartialOrd for LinkedList {
                         let wrapped_int =
                             LinkedList::Cons(Value::Int(*int), Box::new(LinkedList::Empty));
 
-                        match list.partial_cmp(&Box::new(wrapped_int)) {
-                            Some(Ordering::Equal) => tail.partial_cmp(other_tail),
-                            Some(ordering) => Some(ordering),
-                            None => None,
+                        match list.cmp(&Box::new(wrapped_int)) {
+                            Ordering::Equal => tail.cmp(other_tail),
+                            ordering => ordering,
                         }
                     }
 
-                    (Value::List(list), Value::List(other_list)) => {
-                        match list.partial_cmp(other_list) {
-                            Some(Ordering::Equal) => tail.partial_cmp(other_tail),
-                            Some(ordering) => Some(ordering),
-                            None => None,
-                        }
-                    }
+                    (Value::List(list), Value::List(other_list)) => match list.cmp(other_list) {
+                        Ordering::Equal => tail.cmp(other_tail),
+                        ordering => ordering,
+                    },
                 }
             }
         }
+    }
+}
+
+impl PartialOrd for LinkedList {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -258,4 +258,37 @@ pub fn run(input: &str) {
     }
 
     println!("Sum of ordered indexs is {sum_of_ordered_indexes}");
+
+    // Part 2
+    println!("\n== Part 2 ==");
+
+    let mut packets = input
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(LinkedList::from_string)
+        .collect::<Vec<LinkedList>>();
+
+    // Push the divider packets.
+    let divider_packet1 = LinkedList::from_string("[[2]]");
+    let divider_packet2 = LinkedList::from_string("[[6]]");
+    packets.push(divider_packet1.clone());
+    packets.push(divider_packet2.clone());
+
+    packets.sort();
+
+    let position1 = packets
+        .iter()
+        .position(|packet| packet == &divider_packet1)
+        .unwrap()
+        + 1;
+    let position2 = packets
+        .iter()
+        .position(|packet| packet == &divider_packet2)
+        .unwrap()
+        + 1;
+
+    println!(
+        "Position of packet 1 is {position1}, packet 2 is {position2}, key is {}",
+        position1 * position2
+    );
 }
