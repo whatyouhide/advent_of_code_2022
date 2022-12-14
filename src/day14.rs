@@ -2,53 +2,92 @@ use std::collections::HashMap;
 
 type Point = (usize, usize);
 
-type World = HashMap<Point, char>;
+struct World {
+    points: HashMap<Point, char>,
+    floor_y: usize,
+}
+
+impl World {
+    fn at_point(&self, point: &Point) -> Option<&char> {
+        match self.points.get(point) {
+            Some(char) => Some(char),
+            None if point.1 == self.floor_y => Some(&'#'),
+            None if point.1 < self.floor_y => Some(&'.'),
+            None => None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod world_tests {
+    use super::*;
+
+    #[test]
+    fn test_at_point() {
+        let world = World {
+            points: HashMap::from([((500, 0), '#')]),
+            floor_y: 10,
+        };
+
+        assert_eq!(world.at_point(&(500, 0)), Some(&'#'));
+        assert_eq!(world.at_point(&(500, 1)), Some(&'.'));
+        assert_eq!(world.at_point(&(499, 9)), Some(&'.'));
+        assert_eq!(world.at_point(&(501, 9)), Some(&'.'));
+        assert_eq!(world.at_point(&(500, 10)), Some(&'#'));
+        assert_eq!(world.at_point(&(500, 10)), Some(&'#'));
+        assert_eq!(world.at_point(&(499, 10)), Some(&'#'));
+        assert_eq!(world.at_point(&(501, 10)), Some(&'#'));
+        assert_eq!(world.at_point(&(500, 11)), None);
+    }
+}
 
 pub fn run(input: &str) {
-    let mut points = input
+    let points = input
         .lines()
         .map(parse_line)
         .flatten()
         .collect::<Vec<Point>>();
 
-    points.sort();
-    points.dedup();
-
     let sand_starting_point = (500, 0);
-
-    let mut world = HashMap::new();
 
     let min_x = points.iter().map(|(x, _)| x).min().unwrap();
     let max_x = points.iter().map(|(x, _)| x).max().unwrap();
     let min_y = points.iter().map(|(_, y)| y).min().unwrap().min(&0);
     let max_y = points.iter().map(|(_, y)| y).max().unwrap();
 
+    let mut world = World {
+        points: HashMap::new(),
+        floor_y: max_y + 2,
+    };
+
     for y in *min_y..=*max_y {
         for x in *min_x..=*max_x {
             if let Some((_, _)) = points.iter().find(|(x1, y1)| x1 == &x && y1 == &y) {
-                world.insert((x, y), '#');
+                world.points.insert((x, y), '#');
             } else {
-                world.insert((x, y), '.');
+                world.points.insert((x, y), '.');
             }
         }
     }
 
+    println!("Starting world:");
     draw_world(&world);
 
     let mut units_of_send_to_rest = 0;
 
     loop {
-        if !pour_sand(&mut world, sand_starting_point) {
+        let rest_point = pour_sand(&mut world, sand_starting_point);
+        units_of_send_to_rest += 1;
+
+        if rest_point == sand_starting_point {
             break;
         }
-
-        units_of_send_to_rest += 1;
     }
 
-    println!("");
+    println!("\nEnd world:");
     draw_world(&world);
 
-    println!("Total units of sand that came to rest: {units_of_send_to_rest}");
+    println!("\nTotal units of sand that came to rest: {units_of_send_to_rest}");
 }
 
 fn parse_line(line: &str) -> Vec<Point> {
@@ -87,26 +126,26 @@ fn parse_line(line: &str) -> Vec<Point> {
 }
 
 fn draw_world(world: &World) {
-    let min_x = world.iter().map(|((x, _), _)| x).min().unwrap();
-    let max_x = world.iter().map(|((x, _), _)| x).max().unwrap();
-    let min_y = world.iter().map(|((_, y), _)| y).min().unwrap().min(&0);
-    let max_y = world.iter().map(|((_, y), _)| y).max().unwrap();
+    let min_x = world.points.iter().map(|((x, _), _)| x).min().unwrap();
+    let max_x = world.points.iter().map(|((x, _), _)| x).max().unwrap();
+    let min_y = world
+        .points
+        .iter()
+        .map(|((_, y), _)| y)
+        .min()
+        .unwrap()
+        .min(&0);
 
-    for y in *min_y..=*max_y {
+    for y in *min_y..=world.floor_y {
         for x in *min_x..=*max_x {
-            print!(
-                "{}",
-                world
-                    .get(&(x, y))
-                    .expect(format!("No point at ({}, {})", x, y).as_str())
-            );
+            print!("{}", world.at_point(&(x, y)).unwrap());
         }
         println!();
     }
 }
 
-// Returns true if the sand comes to rest, false if it falls to the endless void.
-fn pour_sand(world: &mut World, sand_starting_point: Point) -> bool {
+// Returns the point where the sand comes to rest.
+fn pour_sand(world: &mut World, sand_starting_point: Point) -> Point {
     let mut sand_point = sand_starting_point;
 
     loop {
@@ -115,40 +154,43 @@ fn pour_sand(world: &mut World, sand_starting_point: Point) -> bool {
         let down_right = (sand_point.0 + 1, sand_point.1 + 1);
 
         match (
-            world.get(&down),
-            world.get(&down_left),
-            world.get(&down_right),
+            world.at_point(&down),
+            world.at_point(&down_left),
+            world.at_point(&down_right),
         ) {
             // There is space right below, so we move the sand down and keep going.
             (Some('.'), _, _) => {
-                world.insert(sand_point, '.');
-                world.insert(down, '+');
+                world.points.insert(sand_point, '.');
+                world.points.insert(down, '+');
                 sand_point = down;
             }
 
             // Space below is taken by sand or rock, but down left is free.
             (Some('#' | 'o'), Some('.'), _) => {
-                world.insert(sand_point, '.');
-                world.insert(down_left, '+');
+                world.points.insert(sand_point, '.');
+                world.points.insert(down_left, '+');
                 sand_point = down_left;
             }
 
             // Spaces below *and* down left are taken by sand or rock, but down right is free.
             (Some('#' | 'o'), Some('#' | 'o'), Some('.')) => {
-                world.insert(sand_point, '.');
-                world.insert(down_right, '+');
+                world.points.insert(sand_point, '.');
+                world.points.insert(down_right, '+');
                 sand_point = down_right;
             }
 
             // All spaces are taken, so the sand comes to rest at the current point.
-            (Some(_), Some(_), Some(_)) => {
-                world.insert(sand_point, 'o');
-                return true;
+            (Some('#' | 'o'), Some('#' | 'o'), Some('#' | 'o')) => {
+                world.points.insert(sand_point, 'o');
+                return sand_point;
             }
 
-            // The sand has fallen to the endless void.
-            _ => {
-                return false;
+            (a, b, c) => {
+                println!(
+                    "Unexpected state at {:?}: {:?} is {:?}, {:?} is {:?}, {:?} is {:?}",
+                    sand_point, down, a, down_left, b, down_right, c
+                );
+                panic!();
             }
         }
     }
