@@ -114,12 +114,9 @@ impl Grid {
         for (row, mut ranges) in ranges_by_row {
             ranges.sort_by_key(|range| range.start().clone());
 
-            let mut mut_ranges = ranges.clone();
-            mut_ranges.truncate(1);
+            let mut mut_ranges = vec![ranges[0].clone()];
 
-            let len = &ranges.len();
-
-            for i in 1..*len {
+            for i in 1..ranges.len() {
                 let next_range = ranges[i].clone();
                 let current_range = mut_ranges.pop().unwrap();
 
@@ -133,7 +130,7 @@ impl Grid {
                 }
             }
 
-            merged_ranges.insert(row, mut_ranges.clone());
+            merged_ranges.insert(row, mut_ranges);
         }
 
         merged_ranges
@@ -180,21 +177,7 @@ pub fn run(input: &str) {
     let sensors_and_beacons = input.lines().map(parse_sensor_and_beacon).collect();
     let grid = Grid::new(sensors_and_beacons);
 
-    // grid.draw();
-
-    println!("Building detected ranges...");
     let detected_ranges = grid.detected_ranges();
-
-    // let target_row = 10;
-    // let mut forbidden_positions = 0;
-
-    // for point in grid.points_in_row(target_row) {
-    //     if grid.is_in_sensor_range(&point) {
-    //         forbidden_positions += 1;
-    //     }
-    // }
-
-    // println!("On line {target_row} there are {forbidden_positions} forbidden positions");
 
     for y in 0..=4000000 {
         if y % 1000 == 0 {
