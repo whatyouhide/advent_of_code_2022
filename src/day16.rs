@@ -1,10 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use petgraph::{
     adj::NodeIndex,
     dot::{Config, Dot},
     prelude::DiGraph,
-    visit::{EdgeRef, IntoNeighbors},
 };
 use regex::Regex;
 
