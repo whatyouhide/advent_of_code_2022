@@ -220,6 +220,10 @@ impl State {
             None
         }
     }
+
+    fn utopistic_cracked_geodes(&self, time_left: u16) -> u32 {
+        (self.cracked_geodes + time_left) as u32
+    }
 }
 
 pub fn run(input: &str) {
@@ -255,6 +259,7 @@ fn simulate_all(blueprint: &Blueprint) -> (u32, u64) {
         State::from_blueprint(blueprint),
         blueprint,
         TOTAL_MINUTES,
+        0,
         &mut explored_simulations,
     );
 
@@ -265,6 +270,7 @@ fn simulate_all_(
     current_state: State,
     blueprint: &Blueprint,
     time_left: u16,
+    max_geodes_seen: u32,
     explored_simulations: &mut u64,
 ) -> u32 {
     // Simulation is finished, so we return its number of open geodes and count it as explored.
@@ -276,7 +282,21 @@ fn simulate_all_(
     current_state
         .possible_next_states(blueprint, time_left)
         .iter()
-        .map(|s| simulate_all_(s.clone(), blueprint, time_left - 1, explored_simulations))
+        .filter_map(|next_state| {
+            if next_state.utopistic_cracked_geodes(time_left) < max_geodes_seen {
+                // No point in pursuing this simulation, as it will not yield more open geodes
+                // than what we've already seen.
+                None
+            } else {
+                Some(simulate_all_(
+                    next_state.clone(),
+                    blueprint,
+                    time_left - 1,
+                    next_state.cracked_geodes as u32,
+                    explored_simulations,
+                ))
+            }
+        })
         .max()
         .unwrap()
 }
