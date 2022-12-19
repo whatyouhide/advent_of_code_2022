@@ -1,8 +1,8 @@
-use std::{fmt::Debug, time::Instant};
+use std::{fmt::Debug, str::FromStr, time::Instant};
 
 use regex::Regex;
 
-const TOTAL_MINUTES: u16 = 10;
+const TOTAL_MINUTES: u16 = 24;
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 struct Ore(u16);
@@ -20,7 +20,32 @@ struct Blueprint {
 }
 
 impl Blueprint {
-    fn from_string(string: &str) -> Self {
+    fn max_ore_cost(&self) -> Ore {
+        vec![
+            self.ore_robot_cost,
+            self.clay_robot_cost,
+            self.obsidian_robot_cost.0,
+            self.geode_robot_cost.0,
+        ]
+        .iter()
+        .max()
+        .unwrap()
+        .clone()
+    }
+
+    fn max_clay_cost(&self) -> Clay {
+        self.obsidian_robot_cost.1.clone()
+    }
+
+    fn max_obsidian_cost(&self) -> Obsidian {
+        self.geode_robot_cost.1.clone()
+    }
+}
+
+impl FromStr for Blueprint {
+    type Err = &'static str;
+
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
         let ore_robot_cost = Ore(Regex::new(r"Each ore robot costs (\d+) ore")
             .unwrap()
             .captures_iter(string)
@@ -60,12 +85,12 @@ impl Blueprint {
             Obsidian(geode_robot_costs[2].parse::<u16>().unwrap()),
         );
 
-        Self {
+        Ok(Self {
             ore_robot_cost,
             clay_robot_cost,
             obsidian_robot_cost,
             geode_robot_cost,
-        }
+        })
     }
 }
 
@@ -79,10 +104,14 @@ struct State {
     clay: Clay,
     obsidian: Obsidian,
     cracked_geodes: u16,
+
+    max_ore_needed: Ore,
+    max_clay_needed: Clay,
+    max_obsidian_needed: Obsidian,
 }
 
 impl State {
-    fn new() -> Self {
+    fn from_blueprint(blueprint: &Blueprint) -> Self {
         Self {
             ore_robots: 1,
             clay_robots: 0,
@@ -92,11 +121,48 @@ impl State {
             clay: Clay(0),
             obsidian: Obsidian(0),
             cracked_geodes: 0,
+            max_ore_needed: blueprint.max_ore_cost(),
+            max_clay_needed: blueprint.max_clay_cost(),
+            max_obsidian_needed: blueprint.max_obsidian_cost(),
         }
     }
 
-    fn build_ore_robot(&self, blueprint: &Blueprint) -> Option<Self> {
-        if self.ore >= blueprint.ore_robot_cost {
+    fn possible_next_states(&self, blueprint: &Blueprint, time_left: u16) -> Vec<State> {
+        let possible_next_states_with_new_robots = vec![
+            self.build_ore_robot(blueprint, time_left),
+            self.build_clay_robot(blueprint, time_left),
+            self.build_obsidian_robot(blueprint, time_left),
+            self.build_geode_robot(blueprint),
+        ]
+        .iter()
+        .filter_map(|state| state.clone())
+        .collect::<Vec<Self>>();
+
+        let mut next_states = possible_next_states_with_new_robots;
+
+        // Only have an "idle" state (where we only produce and don't build any robots)
+        // if we don't have enough robots to build the max of each resource.
+        if self.ore < self.max_ore_needed
+            || self.clay < self.max_clay_needed
+            || self.obsidian < self.max_obsidian_needed
+        {
+            next_states.push(self.clone());
+        }
+
+        for mut state in &mut next_states {
+            state.ore = Ore(state.ore.0 + self.ore_robots);
+            state.clay = Clay(state.clay.0 + self.clay_robots);
+            state.obsidian = Obsidian(state.obsidian.0 + self.obsidian_robots);
+            state.cracked_geodes = state.cracked_geodes + self.geode_robots;
+        }
+
+        next_states
+    }
+
+    fn build_ore_robot(&self, blueprint: &Blueprint, time_left: u16) -> Option<Self> {
+        if self.ore_robots * time_left + self.ore.0 >= self.max_ore_needed.0 * time_left {
+            None
+        } else if self.ore >= blueprint.ore_robot_cost {
             Some(Self {
                 ore_robots: self.ore_robots + 1,
                 ore: Ore(self.ore.0 - blueprint.ore_robot_cost.0),
@@ -107,8 +173,10 @@ impl State {
         }
     }
 
-    fn build_clay_robot(&self, blueprint: &Blueprint) -> Option<Self> {
-        if self.ore >= blueprint.clay_robot_cost {
+    fn build_clay_robot(&self, blueprint: &Blueprint, time_left: u16) -> Option<Self> {
+        if self.clay_robots * time_left + self.clay.0 >= self.max_clay_needed.0 * time_left {
+            None
+        } else if self.ore >= blueprint.clay_robot_cost {
             Some(Self {
                 clay_robots: self.clay_robots + 1,
                 ore: Ore(self.ore.0 - blueprint.clay_robot_cost.0),
@@ -119,10 +187,14 @@ impl State {
         }
     }
 
-    fn build_obsidian_robot(&self, blueprint: &Blueprint) -> Option<Self> {
+    fn build_obsidian_robot(&self, blueprint: &Blueprint, time_left: u16) -> Option<Self> {
         let (ore_cost, clay_cost) = blueprint.obsidian_robot_cost;
 
-        if self.ore >= ore_cost && self.clay >= clay_cost {
+        if self.obsidian_robots * time_left + self.obsidian.0
+            >= self.max_obsidian_needed.0 * time_left
+        {
+            None
+        } else if self.ore >= ore_cost && self.clay >= clay_cost {
             Some(Self {
                 obsidian_robots: self.obsidian_robots + 1,
                 ore: Ore(self.ore.0 - blueprint.obsidian_robot_cost.0 .0),
@@ -140,49 +212,20 @@ impl State {
         if self.ore >= ore_cost && self.obsidian >= obsidian_cost {
             Some(Self {
                 geode_robots: self.geode_robots + 1,
-                ore: Ore(self.ore.0 - blueprint.geode_robot_cost.0 .0),
-                obsidian: Obsidian(self.obsidian.0 - blueprint.geode_robot_cost.1 .0),
+                ore: Ore(self.ore.0 - ore_cost.0),
+                obsidian: Obsidian(self.obsidian.0 - obsidian_cost.0),
                 ..self.clone()
             })
         } else {
             None
         }
     }
-
-    fn possible_next_states(&self, blueprint: &Blueprint) -> Vec<State> {
-        let previous_ore_robots = self.ore_robots;
-        let previous_clay_robots = self.clay_robots;
-        let previous_obsidian_robots = self.obsidian_robots;
-        let previous_geode_robots = self.geode_robots;
-
-        let possible_next_states = vec![
-            Some(self.clone()),
-            self.build_ore_robot(blueprint),
-            self.build_clay_robot(blueprint),
-            self.build_obsidian_robot(blueprint),
-            self.build_geode_robot(blueprint),
-        ];
-
-        let mut next_states = vec![];
-
-        for state in possible_next_states {
-            if let Some(mut state) = state {
-                state.ore = Ore(state.ore.0 + previous_ore_robots);
-                state.clay = Clay(state.clay.0 + previous_clay_robots);
-                state.obsidian = Obsidian(state.obsidian.0 + previous_obsidian_robots);
-                state.cracked_geodes = state.cracked_geodes + previous_geode_robots;
-                next_states.push(state);
-            }
-        }
-
-        next_states
-    }
 }
 
 pub fn run(input: &str) {
     let blueprints = input
         .lines()
-        .map(Blueprint::from_string)
+        .map(|line| line.parse::<Blueprint>().unwrap())
         .collect::<Vec<Blueprint>>();
 
     let mut total_quality_level = 0;
@@ -209,7 +252,7 @@ fn simulate_all(blueprint: &Blueprint) -> (u32, u64) {
     let mut explored_simulations = 0;
 
     let max_open_geodes = simulate_all_(
-        State::new(),
+        State::from_blueprint(blueprint),
         blueprint,
         TOTAL_MINUTES,
         &mut explored_simulations,
@@ -231,7 +274,7 @@ fn simulate_all_(
     }
 
     current_state
-        .possible_next_states(blueprint)
+        .possible_next_states(blueprint, time_left)
         .iter()
         .map(|s| simulate_all_(s.clone(), blueprint, time_left - 1, explored_simulations))
         .max()
