@@ -2,7 +2,7 @@ use std::{fmt::Debug, str::FromStr, time::Instant};
 
 use regex::Regex;
 
-const TOTAL_MINUTES: u16 = 24;
+const TOTAL_MINUTES: u16 = 32;
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 struct Ore(u16);
@@ -133,12 +133,12 @@ impl State {
             self.build_clay_robot(blueprint, time_left),
             self.build_obsidian_robot(blueprint, time_left),
             self.build_geode_robot(blueprint),
-        ]
-        .iter()
-        .filter_map(|state| state.clone())
-        .collect::<Vec<Self>>();
+        ];
 
-        let mut next_states = possible_next_states_with_new_robots;
+        let mut next_states = possible_next_states_with_new_robots
+            .iter()
+            .filter_map(|state| state.clone())
+            .collect::<Vec<Self>>();
 
         // Only have an "idle" state (where we only produce and don't build any robots)
         // if we don't have enough robots to build the max of each resource.
@@ -222,17 +222,19 @@ impl State {
     }
 
     fn utopistic_cracked_geodes(&self, time_left: u16) -> u32 {
-        (self.cracked_geodes + time_left) as u32
+        let t = time_left as u32;
+        self.cracked_geodes as u32 + ((self.geode_robots as u32) * t) + (t * (t + 1)) / 2
     }
 }
 
 pub fn run(input: &str) {
     let blueprints = input
         .lines()
+        .take(3)
         .map(|line| line.parse::<Blueprint>().unwrap())
         .collect::<Vec<Blueprint>>();
 
-    let mut total_quality_level = 0;
+    let mut multiplied_geodes = 0;
 
     for (index, blueprint) in blueprints.iter().enumerate() {
         let blueprint_index = index + 1;
@@ -246,20 +248,21 @@ pub fn run(input: &str) {
             explored_simulations, TOTAL_MINUTES, elapsed, max_open_geodes
         );
 
-        total_quality_level += max_open_geodes * blueprint_index as u32;
+        multiplied_geodes = multiplied_geodes * max_open_geodes;
     }
 
-    println!("\n\nTotal quality level: {}", total_quality_level);
+    println!("\n\nMultiplied geodes: {}", multiplied_geodes);
 }
 
 fn simulate_all(blueprint: &Blueprint) -> (u32, u64) {
     let mut explored_simulations = 0;
+    let mut max_geodes_seen = 0;
 
     let max_open_geodes = simulate_all_(
         State::from_blueprint(blueprint),
         blueprint,
         TOTAL_MINUTES,
-        0,
+        &mut max_geodes_seen,
         &mut explored_simulations,
     );
 
@@ -270,7 +273,7 @@ fn simulate_all_(
     current_state: State,
     blueprint: &Blueprint,
     time_left: u16,
-    max_geodes_seen: u32,
+    max_geodes_seen: &mut u32,
     explored_simulations: &mut u64,
 ) -> u32 {
     // Simulation is finished, so we return its number of open geodes and count it as explored.
@@ -279,23 +282,27 @@ fn simulate_all_(
         return current_state.cracked_geodes as u32;
     }
 
+    if current_state.cracked_geodes as u32 > *max_geodes_seen {
+        *max_geodes_seen = current_state.cracked_geodes as u32;
+    }
+
+    if current_state.utopistic_cracked_geodes(time_left) < *max_geodes_seen {
+        // No point in pursuing this simulation, as it will not yield more open geodes
+        // than what we've already seen.
+        return 0;
+    };
+
     current_state
         .possible_next_states(blueprint, time_left)
         .iter()
-        .filter_map(|next_state| {
-            if next_state.utopistic_cracked_geodes(time_left) < max_geodes_seen {
-                // No point in pursuing this simulation, as it will not yield more open geodes
-                // than what we've already seen.
-                None
-            } else {
-                Some(simulate_all_(
-                    next_state.clone(),
-                    blueprint,
-                    time_left - 1,
-                    next_state.cracked_geodes as u32,
-                    explored_simulations,
-                ))
-            }
+        .map(|next_state| {
+            simulate_all_(
+                next_state.clone(),
+                blueprint,
+                time_left - 1,
+                max_geodes_seen,
+                explored_simulations,
+            )
         })
         .max()
         .unwrap()
