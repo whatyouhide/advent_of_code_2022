@@ -1,4 +1,4 @@
-use std::{env, fs};
+use std::{env, fs, time::Instant};
 
 mod day1;
 mod day10;
@@ -40,6 +40,8 @@ fn main() {
 
     println!("== Running {day_arg} ==\n");
 
+    let start_time = Instant::now();
+
     match day {
         "day1" => day1::run(input.as_str()),
         "day2" => day2::run(input.as_str()),
@@ -67,6 +69,8 @@ fn main() {
         "day24" => day24::run(input.as_str()),
         _ => println!("No such day: {}", day),
     }
+
+    println!("\nCompleted {} in {:.2?}", day_arg, start_time.elapsed());
 }
 
 fn read_file_for_day(day: &str) -> String {
