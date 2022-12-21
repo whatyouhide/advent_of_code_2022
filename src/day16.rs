@@ -1,126 +1,166 @@
-use std::collections::HashMap;
-
-use petgraph::{
-    adj::NodeIndex,
-    dot::{Config, Dot},
-    prelude::DiGraph,
-};
 use regex::Regex;
+use std::{collections::HashMap, fmt::Debug, str::FromStr};
 
-struct Valves {
-    open_valves: HashMap<NodeIndex, u16>,
+const MINUTES: u16 = 30;
+
+type ValveID = String;
+
+#[derive(Hash, PartialEq, Eq, Clone)]
+struct Valve {
+    id: ValveID,
+    flow_rate: u32,
+    connected_valves: Vec<ValveID>,
+    open: bool,
 }
 
-impl Valves {
-    fn new() -> Self {
+impl FromStr for Valve {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let re = Regex::new(
+            r"
+            Valve (?P<valve>\w{2}) has flow rate=(?P<flow_rate>\d+); tunnel(s?) lead(s?) to valve(s?) (?P<valves>.+)
+        "
+            .trim()
+        )
+        .unwrap();
+
+        let cap = re.captures(s).unwrap();
+
+        Ok(Self {
+            id: cap["valve"].to_string(),
+            flow_rate: cap["flow_rate"].parse::<u32>().unwrap(),
+            connected_valves: cap["valves"]
+                .split(",")
+                .map(|v| v.trim().to_string())
+                .collect::<Vec<ValveID>>(),
+            open: false,
+        })
+    }
+}
+
+impl Debug for Valve {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "V({}): flow_rate={}, open={}, connected_valves={:?}",
+            self.id, self.flow_rate, self.open, self.connected_valves
+        )
+    }
+}
+
+#[cfg(test)]
+mod valve_tests {
+    use super::*;
+
+    #[test]
+    fn test_from_str() {
+        let input = "Valve AA has flow rate=1; tunnels lead to valves BB, CC";
+        let valve = Valve::from_str(input).unwrap();
+
+        assert_eq!(valve.id, "AA");
+        assert_eq!(valve.flow_rate, 1);
+        assert_eq!(valve.connected_valves, vec!["BB", "CC"]);
+        assert!(!valve.open);
+    }
+}
+
+#[derive(Clone)]
+struct State {
+    valves: HashMap<ValveID, Valve>,
+    current_valve: ValveID,
+    released_pressure: u32,
+}
+
+impl Debug for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(
+            f,
+            "Current valve is {} and released pressure is {}",
+            self.current_valve, self.released_pressure
+        )?;
+
+        for (_, valve) in self.valves.iter() {
+            writeln!(f, "{:?}", valve)?;
+        }
+
+        writeln!(f, "\n")?;
+
+        Ok(())
+    }
+}
+
+impl State {
+    fn new(valves: Vec<Valve>) -> Self {
         Self {
-            open_valves: HashMap::new(),
+            valves: HashMap::from_iter(valves.into_iter().map(|v| (v.id.clone(), v))),
+            current_valve: "AA".to_string(),
+            released_pressure: 0,
         }
     }
 
-    fn state_as_string(&self) -> String {
-        if self.open_valves.is_empty() {
-            String::from("No valves are open")
-        } else {
-            String::from(format!(
-                "Valves {:?} are open, releasing {} pressure",
-                self.open_valves
-                    .keys()
-                    .map(|node| format!("{:?}", node))
-                    .collect::<Vec<String>>()
-                    .join(", "),
-                self.open_valves.values().sum::<u16>()
-            ))
+    fn releasable_pressure(&self) -> u32 {
+        self.valves
+            .values()
+            .filter(|v| v.open)
+            .map(|v| v.flow_rate)
+            .sum()
+    }
+
+    fn next_possible(&self) -> Vec<Self> {
+        let current_valve = self.valves.get(&self.current_valve).unwrap();
+
+        let mut states = current_valve
+            .connected_valves
+            .iter()
+            .map(|next_valve| Self {
+                current_valve: next_valve.clone(),
+                ..self.clone()
+            })
+            .collect::<Vec<Self>>();
+
+        // If the current valve is not open and has a flow rate, we also add a state where what we
+        // do in this minute is opening the valve.
+        if !current_valve.open && current_valve.flow_rate > 0 {
+            let mut state_with_open_valve = self.clone();
+            let open_valve = Valve {
+                open: true,
+                ..current_valve.clone()
+            };
+            state_with_open_valve
+                .valves
+                .insert(open_valve.id.clone(), open_valve);
+            states.push(state_with_open_valve);
         }
+
+        for mut state in states.iter_mut() {
+            let releasable_pressure = state.releasable_pressure();
+            state.released_pressure += releasable_pressure;
+        }
+
+        states
     }
 }
 
 pub fn run(input: &str) {
-    let re = Regex::new(
-        r"
-        Valve (?P<valve>\w{2}) has flow rate=(?P<flow_rate>\d+); tunnel(s?) lead(s?) to valve(s?) (?P<valves>.+)
-    "
-        .trim(),
-    )
-    .unwrap();
+    let valves = input
+        .lines()
+        .map(|line| line.parse::<Valve>().unwrap())
+        .collect::<Vec<Valve>>();
 
-    let mut graph: DiGraph<u16, ()> = DiGraph::new();
-    let mut node_index_map = HashMap::new();
+    let max_pressure = simulate_max_pressure(State::new(valves), MINUTES);
+    println!("Max pressure: {}", max_pressure);
+}
 
-    let mut valves = Valves::new();
-
-    let captured_lines = input.trim().lines().map(|line| re.captures(line).unwrap());
-
-    for cap in captured_lines.clone() {
-        let valve = cap["valve"].to_string();
-        let flow_rate = cap["flow_rate"].parse::<u16>().unwrap();
-        let node_index = graph.add_node(flow_rate);
-        node_index_map.insert(valve, node_index);
+fn simulate_max_pressure(state: State, time_left: u16) -> u32 {
+    if time_left == 0 {
+        return state.released_pressure;
     }
 
-    for cap in captured_lines.clone() {
-        let valve = cap["valve"].to_string();
-        let valves = cap["valves"]
-            .split(",")
-            .map(|v| v.trim())
-            .collect::<Vec<&str>>();
-
-        for other_valve in valves {
-            let node_index = node_index_map.get(&valve).unwrap();
-
-            if let None = node_index_map.get(&other_valve.to_string()) {
-                panic!("No node for valve: {}", other_valve);
-            }
-
-            let other_node_index = node_index_map.get(&other_valve.to_string()).unwrap();
-            graph.add_edge(*node_index, *other_node_index, ());
-        }
-    }
-
-    println!("{:?}", Dot::with_config(&graph, &[Config::NodeIndexLabel]));
-
-    let mut current_node = node_index_map.get("AA").unwrap().clone();
-
-    for minute in 1..=30 {
-        println!("\n== Minute {minute} ==");
-        println!("{}", valves.state_as_string());
-
-        match valves.open_valves.get(&(current_node.index() as u32)) {
-            // Current valve is already open, so we move to the next valve.
-            Some(flow_rate) => {
-                println!(
-                    "You are at valve {:?} with flow rate {}",
-                    current_node, flow_rate
-                );
-            }
-            None if graph.node_weight(current_node).unwrap() == &0 => {
-                println!(
-                    "You are at valve {:?} with no flow, so moving on.",
-                    current_node
-                );
-            }
-            None => {
-                println!(
-                    "You are at valve {:?} with flow rate {}",
-                    current_node,
-                    graph.node_weight(current_node).unwrap()
-                );
-                println!("Opening valve: {:?}", current_node);
-                valves.open_valves.insert(
-                    current_node.index() as u32,
-                    *graph.node_weight(current_node).unwrap(),
-                );
-                continue;
-            }
-        }
-
-        let next_node = graph
-            .neighbors(current_node)
-            .max_by_key(|node| graph.node_weight(*node))
-            .unwrap();
-
-        println!("You move to valve {:?}", next_node);
-
-        current_node = next_node;
-    }
+    state
+        .next_possible()
+        .into_iter()
+        .map(|s| simulate_max_pressure(s, time_left - 1))
+        .max()
+        .unwrap()
 }
