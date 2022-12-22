@@ -65,21 +65,49 @@ enum Instruction {
 #[derive(Debug, PartialEq, Eq)]
 enum Cell {
     Empty,
+    Space,
     Wall,
 }
 
 impl Cell {
-    fn from_char(c: char) -> Option<Cell> {
+    fn from_char(c: char) -> Self {
         match c {
-            '.' => Some(Cell::Empty),
-            '#' => Some(Cell::Wall),
-            _ => None,
+            '.' => Cell::Space,
+            '#' => Cell::Wall,
+            ' ' => Cell::Empty,
+            _ => unreachable!(),
+        }
+    }
+
+    fn is_some(&self) -> bool {
+        match self {
+            Cell::Empty => false,
+            _ => true,
         }
     }
 }
 
+#[cfg(test)]
+mod cell_tests {
+    use super::*;
+
+    #[test]
+    fn from_char() {
+        assert_eq!(Cell::from_char('.'), Cell::Space);
+        assert_eq!(Cell::from_char('#'), Cell::Wall);
+        assert_eq!(Cell::from_char(' '), Cell::Empty);
+    }
+
+    #[test]
+    fn is_some() {
+        assert_eq!(Cell::Space.is_some(), true);
+        assert_eq!(Cell::Wall.is_some(), true);
+        assert_eq!(Cell::Empty.is_some(), false);
+    }
+}
+
 struct Board {
-    map: Vec<Vec<Option<Cell>>>,
+    map: Vec<Vec<Cell>>,
     current_position: Position,
     current_direction: Direction,
     visited_positions: HashMap<Position, Direction>,
@@ -100,16 +128,16 @@ impl FromStr for Board {
             let mut row = Vec::with_capacity(col_count);
 
             for col_index in 0..col_count {
-                match line.chars().nth(col_index).and_then(Cell::from_char) {
-                    cell @ Some(_) => {
-                        if current_position.is_none() {
-                            current_position = Some((row_index, col_index));
-                        }
+                let cell = line
+                    .chars()
+                    .nth(col_index)
+                    .map_or(Cell::Empty, Cell::from_char);
 
-                        row.push(cell);
-                    }
-                    cell @ None => row.push(cell),
+                if cell == Cell::Space && current_position.is_none() {
+                    current_position = Some((row_index, col_index));
                 }
+
+                row.push(cell);
             }
 
             map.push(row);
@@ -131,20 +159,19 @@ impl Display for Board {
         for (row_index, row) in self.map.iter().enumerate() {
             for (cell_index, cell) in row.iter().enumerate() {
                 match cell {
-                    Some(_) if self.current_position == (row_index, cell_index) => {
+                    _ if self.current_position == (row_index, cell_index) => {
                         let style = Style::new().bold().on(ansi_term::Color::Green);
                         write!(f, "{}", style.paint(format!("{}", self.current_direction)))?
                     }
-                    Some(_)
-                        if self
-                            .visited_positions
-                            .contains_key(&(row_index, cell_index)) =>
+                    _ if self
+                        .visited_positions
+                        .contains_key(&(row_index, cell_index)) =>
                     {
                         write!(f, "{}", self.visited_positions[&(row_index, cell_index)])?
                     }
-                    Some(Cell::Empty) => write!(f, ".")?,
-                    Some(Cell::Wall) => write!(f, "#")?,
-                    None => write!(f, " ")?,
+                    Cell::Space => write!(f, ".")?,
+                    Cell::Wall => write!(f, "#")?,
+                    Cell::Empty => write!(f, " ")?,
                 }
             }
             writeln!(f)?;
@@ -155,102 +182,102 @@ impl Display for Board {
 }
 
 impl Board {
-    fn apply_instruction(&mut self, instruction: &Instruction) {
+    pub fn apply_instruction(&mut self, instruction: &Instruction) {
         match instruction {
             Instruction::TurnLeft => self.current_direction = self.current_direction.turn_left(),
             Instruction::TurnRight => self.current_direction = self.current_direction.turn_right(),
-            Instruction::Move(n) => self.move_forward(*n),
+            Instruction::Move(n) => self.move_(*n),
         }
     }
 
-    fn move_forward(&mut self, count: usize) {
+    fn move_(&mut self, count: usize) {
         for _ in 0..count {
-            let (row_index, col_index) = self.current_position;
-
-            let maybe_new_position = match self.current_direction {
-                Direction::North => (row_index.checked_sub(1), Some(col_index)),
-                Direction::East => (Some(row_index), col_index.checked_add(1)),
-                Direction::South => (row_index.checked_add(1), Some(col_index)),
-                Direction::West => (Some(row_index), col_index.checked_sub(1)),
-            };
-
-            let new_position = maybe_new_position
-                .0
-                .and_then(|row| maybe_new_position.1.map(|col| (row, col)));
-
-            let new_cell =
-                new_position.and_then(|(row, col)| self.map.get(row).and_then(|row| row.get(col)));
-
-            match new_cell {
-                Some(None) | None => {
-                    let new_position = self.wrap(&self.current_position);
-                    self.visited_positions
-                        .insert(self.current_position, self.current_direction);
-                    self.current_position = new_position;
-                }
-                Some(Some(Cell::Wall)) => {
-                    self.visited_positions
-                        .insert(self.current_position, self.current_direction);
-                    break;
-                }
-
-                Some(Some(Cell::Empty)) => {
-                    self.visited_positions
-                        .insert(self.current_position, self.current_direction);
-                    self.current_position = new_position.unwrap();
-                }
-            }
+            self.move_forward();
         }
     }
 
-    fn wrap(&self, position: &Position) -> Position {
-        let (row_index, col_index) = position;
+    fn move_forward(&mut self) {
+        let (row_index, col_index) = self.current_position;
 
-        match self.current_direction {
+        let new_position = match self.current_direction {
             Direction::East => {
-                let row = &self.map[*row_index];
-                let new_col_index = row.iter().position(|cell| cell.is_some()).unwrap();
+                let row = &self.map[row_index];
 
-                match self.map[*row_index][new_col_index] {
-                    Some(Cell::Empty) => (*row_index, new_col_index),
-                    Some(Cell::Wall) => position.clone(),
-                    _ => unreachable!(),
+                match self.map[row_index].get(col_index + 1) {
+                    Some(Cell::Space) => (row_index, col_index + 1),
+                    Some(Cell::Wall) => self.current_position.clone(),
+                    Some(Cell::Empty) | None => {
+                        let new_col_index = row.iter().position(|cell| cell.is_some()).unwrap();
+
+                        match self.map[row_index][new_col_index] {
+                            Cell::Space => (row_index, new_col_index),
+                            Cell::Wall => self.current_position.clone(),
+                            _ => unreachable!(),
+                        }
+                    }
                 }
             }
             Direction::West => {
-                let row = &self.map[*row_index];
-                let new_col_index = row.iter().rposition(|cell| cell.is_some()).unwrap();
-                match self.map[*row_index][new_col_index] {
-                    Some(Cell::Empty) => (*row_index, new_col_index),
-                    Some(Cell::Wall) => position.clone(),
-                    _ => unreachable!(),
+                let row = &self.map[row_index];
+
+                match col_index
+                    .checked_sub(1)
+                    .and_then(|i| self.map[row_index].get(i))
+                {
+                    Some(Cell::Space) => (row_index, col_index - 1),
+                    Some(Cell::Wall) => self.current_position.clone(),
+                    Some(Cell::Empty) | None => {
+                        let new_col_index = row.iter().rposition(|cell| cell.is_some()).unwrap();
+
+                        match self.map[row_index][new_col_index] {
+                            Cell::Space => (row_index, new_col_index),
+                            Cell::Wall => self.current_position.clone(),
+                            _ => unreachable!(),
+                        }
+                    }
                 }
             }
-            Direction::North => {
-                let new_row_index = self
-                    .map
-                    .iter()
-                    .rposition(|row| row[*col_index].is_some())
-                    .unwrap();
-                match self.map[new_row_index][*col_index] {
-                    Some(Cell::Empty) => (new_row_index, *col_index),
-                    Some(Cell::Wall) => position.clone(),
-                    _ => unreachable!(),
+            Direction::North => match row_index
+                .checked_sub(1)
+                .and_then(|i| self.map.get(i))
+                .map(|row| &row[col_index])
+            {
+                Some(Cell::Space) => (row_index - 1, col_index),
+                Some(Cell::Wall) => self.current_position.clone(),
+                Some(Cell::Empty) | None => {
+                    let new_row_index = self
+                        .map
+                        .iter()
+                        .rposition(|row| row[col_index].is_some())
+                        .unwrap();
+
+                    match self.map[new_row_index][col_index] {
+                        Cell::Space => (new_row_index, col_index),
+                        Cell::Wall => self.current_position.clone(),
+                        _ => unreachable!(),
+                    }
                 }
-            }
-            Direction::South => {
-                let new_row_index = self
-                    .map
-                    .iter()
-                    .position(|row| row[*col_index].is_some())
-                    .unwrap();
-                match self.map[new_row_index][*col_index] {
-                    Some(Cell::Empty) => (new_row_index, *col_index),
-                    Some(Cell::Wall) => position.clone(),
-                    _ => unreachable!(),
+            },
+            Direction::South => match self.map.get(row_index + 1).map(|row| &row[col_index]) {
+                Some(Cell::Space) => (row_index + 1, col_index),
+                Some(Cell::Wall) => self.current_position.clone(),
+                Some(Cell::Empty) | None => {
+                    let new_row_index = self
+                        .map
+                        .iter()
+                        .position(|row| row[col_index].is_some())
+                        .unwrap();
+
+                    match self.map[new_row_index][col_index] {
+                        Cell::Space => (new_row_index, col_index),
+                        Cell::Wall => self.current_position.clone(),
+                        _ => unreachable!(),
+                    }
                 }
-            }
-        }
+            },
+        };
+
+        self.current_position = new_position;
     }
 
     fn password(&self) -> usize {
