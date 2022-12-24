@@ -113,7 +113,7 @@ impl Elves {
         }
     }
 
-    pub fn perform_second_half_of_round(&mut self) {
+    pub fn perform_second_half_of_round(&mut self) -> u32 {
         let mut proposed_positions: HashMap<Position, Vec<Position>> = HashMap::new();
 
         for (elf, direction) in &self.round_proposals {
@@ -141,6 +141,8 @@ impl Elves {
             };
         }
 
+        let mut moved_elves = 0;
+
         for (new_pos, elves) in proposed_positions.iter() {
             if elves.len() > 1 {
                 continue;
@@ -149,9 +151,11 @@ impl Elves {
             let elf = elves[0];
             let elf_index = self.elves.iter().position(|e| *e == elf).unwrap();
             self.elves[elf_index] = *new_pos;
+            moved_elves += 1;
         }
 
         self.round_proposals.clear();
+        moved_elves
     }
 
     pub fn empty_tiles(&self) -> u32 {
@@ -254,11 +258,12 @@ mod elves_tests {
 pub fn run(input: &str) {
     let mut elves = input.parse::<Elves>().unwrap();
 
-    for round in 1..=10 {
-        println!("Elves at round {round}:\n{}\n", elves);
-
+    for round in 1.. {
+        println!("Round {round}...");
         elves.perform_first_half_of_round();
-        elves.perform_second_half_of_round();
+        if elves.perform_second_half_of_round() == 0 {
+            break;
+        }
         elves.rotate_directions_to_consider();
     }
 
