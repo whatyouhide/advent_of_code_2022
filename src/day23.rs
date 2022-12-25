@@ -47,10 +47,10 @@ impl FromStr for Elves {
 
 impl Display for Elves {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let min_x = self.elves.iter().min_by_key(|(x, _)| *x).unwrap().0 - 2;
-        let min_y = self.elves.iter().min_by_key(|(_, y)| *y).unwrap().1 - 2;
-        let max_x = self.elves.iter().max_by_key(|(x, _)| *x).unwrap().0 + 3;
-        let max_y = self.elves.iter().max_by_key(|(_, y)| *y).unwrap().1 + 4;
+        let min_x = self.elves.iter().min_by_key(|(x, _)| *x).unwrap().0;
+        let min_y = self.elves.iter().min_by_key(|(_, y)| *y).unwrap().1;
+        let max_x = self.elves.iter().max_by_key(|(x, _)| *x).unwrap().0;
+        let max_y = self.elves.iter().max_by_key(|(_, y)| *y).unwrap().1;
 
         let mut last_row = min_x;
 
