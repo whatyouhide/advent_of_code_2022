@@ -7,7 +7,7 @@ use std::{
     str::FromStr,
 };
 
-const MINUTES: u16 = 30;
+const MINUTES: u16 = 26;
 
 type ValveID = String;
 type ValveGraph<'a> = graphmap::UnGraphMap<&'a str, ()>;
@@ -243,7 +243,7 @@ pub fn run(input: &str) {
     let flow_rates: HashMap<String, u32> =
         HashMap::from_iter(valves.iter().map(|v| (v.id.clone(), v.flow_rate)));
 
-    let max_pressure = run_simulation(
+    let best_human_state = run_simulation(
         State::new(),
         &distance_matrix,
         &graph,
@@ -251,9 +251,22 @@ pub fn run(input: &str) {
         &mut explored_states,
     );
 
+    let mut edited_flow_rates = flow_rates.clone();
+    for valve in best_human_state.open_valves {
+        edited_flow_rates.insert(valve, 0);
+    }
+
+    let best_elephant_state = run_simulation(
+        State::new(),
+        &distance_matrix,
+        &graph,
+        &edited_flow_rates,
+        &mut explored_states,
+    );
+
     println!(
         "Max pressure found after exploring {explored_states} states: {}",
-        max_pressure
+        best_human_state.released_pressure + best_elephant_state.released_pressure,
     );
 }
 
@@ -263,15 +276,15 @@ fn run_simulation(
     graph: &ValveGraph,
     flow_rates: &HashMap<String, u32>,
     explored_states: &mut u32,
-) -> u32 {
+) -> State {
     *explored_states += 1;
 
     state
         .next_states(graph, distance_matrix, flow_rates)
         .into_iter()
         .map(|s| run_simulation(s, distance_matrix, graph, flow_rates, explored_states))
-        .max()
-        .unwrap_or(state.released_pressure)
+        .max_by_key(|s| s.released_pressure)
+        .unwrap_or(state)
 }
 
 fn graph_from_valves(valves: &Vec<Valve>) -> ValveGraph {
